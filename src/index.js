@@ -1,9 +1,12 @@
-const { Client, GatewayIntentBits } = require(`discord.js`);
-const client = new Client({ intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages, GatewayIntentBits.MessageContent] });
+const { Client, GatewayIntentBits } = require('discord.js');
+const client = new Client({ 
+    intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages, GatewayIntentBits.MessageContent] 
+});
+require('dotenv').config();
+
 const prefix = "k";
 
 const badWords = ["Darth Vader", "Bart Simpson", "Donald Trump", "Barack Obama"];
-
 
 client.on("ready", () => {
     console.log("Bot is online");
@@ -11,72 +14,50 @@ client.on("ready", () => {
 })
 
 client.on("messageCreate", (message) => {
-    const user = message.author; // Users information
-    const args = message.content.slice(prefix.length).split(/ +/);
+    if (!message.content.startsWith(prefix)) {
+        return;
+    }
+
+    const user = message.author;
+    const args = message.content.slice(prefix.length).trim().split(/ +/);
     const command = args.shift().toLowerCase();
     let amount = parseInt(args[0]);
 
-    if (command === "test") {
-        message.channel.send("This bot is working\n# PREFIX WORKS! YOU'RE JUST DUMB");
-        console.log("test run and works")
+    function deleteFewMessages() {
+        return message.channel.bulkDelete(2)
+            .catch(err => console.error(err));
     }
 
-    function tooManyMessages() {
-        return message.channel.bulkDelete(2)
-            .catch((err) => {
-                console.error(err);
-            });
-        }
-        
-    function purgeMessages() {
+    function deleteSelectedMessages() {
         return message.channel.bulkDelete(amount + 2)
-        .catch((err) => {
-            console.error(err);
-        });
+            .catch(err => console.error(err));
+    }
+
+    for (let i = 0; i < badWords.length; i++) {
+        if (message.content.includes(badWords[i])) {
+            message.channel.send("PREPARE TO GET BANISHED TO THE SHADOW REALM")
+                .then(() => setTimeout(deleteFewMessages, 5000));
+            return;
+        }
     }
 
     if (command === "ill") {
-        if (isNaN(amount)) { // no amount given
-            console.log("No messages have been deleted\n" + amount);
-            message.channel.send(`<@${user.id}>` + ": No messages have been deleted as no number has been specified");
-
-            setTimeout(tooManyMessages, 5000);
+        if (isNaN(amount)) {
+            console.log("No messages have been deleted. No number specified.");
+            message.channel.send(`<@${user.id}>: No messages have been deleted as no number has been specified`)
+                .then(() => setTimeout(deleteFewMessages, 5000));
         }
-
-        else if (amount < 1 || amount > 100) { // There are too many or not enough messages to delete
-            console.log(`${user.username}` + ": Too many messages were selected\n" + amount);
-            message.channel.send(`<@${user.id}>` + " I cannot delete that many messages. Please set a number between **1 - 11**");
-
-            setTimeout(tooManyMessages, 5000);
+        else if (amount < 1 || amount > 100) {
+            console.log(`${user.username}: Too many messages selected. ${amount}`);
+            message.channel.send(`<@${user.id}> I cannot delete that many messages. Please set a number between **1 - 11**`)
+                .then(() => setTimeout(deleteFewMessages, 5000));
         }
-
-        else { // will delete the messages
-            console.log(`${user.username}` + ': Messages deleted: "' + amount + '"')
-            message.channel.send(`<@${user.id}>` + '\nAmount of messages that are going to be deleted: **' + amount + '**\nStandby for deletion...');
-
-            setTimeout(purgeMessages, 5000);
+        else {
+            console.log(`${user.username}: Messages deleted: ${amount}`);
+            message.channel.send(`<@${user.id}> Amount of messages that are going to be deleted: **${amount}**\nStandby for deletion...`)
+                .then(() => setTimeout(deleteSelectedMessages, 5000));
         }
     }
+});
 
-    function killBotMessages() {
-        return message.channel.bulkDelete(2)
-    }
-
-    let isBadWordFound = false;
-
-    for ( let x = 0; x < badWords.length; x++ ) {
-        if ( message.content.includes(badWords[x]) ) {
-            console.log(x);
-            isBadWordFound = true;
-            break; // exit the loop once a bad word is found
-        }
-    }
-
-    if (isBadWordFound) {
-        console.log("deleting the bad words");
-        message.channel.send("PREPARE TO GET BANISHED TO THE SHADOW REALM");
-        setTimeout(killBotMessages, 5000);
-    }
-})
-
-client.login("");
+client.login(process.env.TOKEN);
